@@ -9,7 +9,7 @@ from langchain_core.vectorstores import InMemoryVectorStore
 from langgraph.graph import MessagesState, StateGraph, END
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import ToolNode, tools_condition, create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
 if not os.environ.get("GOOGLE_API_KEY"):
@@ -141,3 +141,20 @@ for step in graph.stream(
     config=config,
 ):
     step["messages"][-1].pretty_print()
+    
+# Last step: Create an Agentic RAG
+agent_executor = create_react_agent(llm, [retrieve], checkpointer=memory)
+
+config = {"configurable": {"thread_id": "def234"}}
+
+input_message = (
+    "What is the standard method for Task Decomposition?\n\n"
+    "Once you get the answer, look up common extensions of that method."
+)
+
+for event in agent_executor.stream(
+    {"messages": [{"role": "user", "content": input_message}]},
+    stream_mode="values",
+    config=config,
+):
+    event["messages"][-1].pretty_print()
