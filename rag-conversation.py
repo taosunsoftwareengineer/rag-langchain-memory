@@ -10,6 +10,7 @@ from langgraph.graph import MessagesState, StateGraph, END
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.memory import MemorySaver
 
 if not os.environ.get("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = getpass.getpass("Enter API key for Google: ")
@@ -109,20 +110,34 @@ graph_builder.add_edge("tools", "generate")
 graph_builder.add_edge("generate", END)
 graph = graph_builder.compile()
 
-input_message = "Hello"
+# input_message = "Hello"
 
-for step in graph.stream(
-    {"messages": [{"role": "user", "content": input_message}]},
-    stream_mode="values"
-):
-    step["messages"][-1].pretty_print()
+# for step in graph.stream(
+#     {"messages": [{"role": "user", "content": input_message}]},
+#     stream_mode="values"
+# ):
+#     step["messages"][-1].pretty_print()
+
+memory = MemorySaver()
+graph = graph_builder.compile(checkpointer=memory)
+
+# Specify an ID for the thread
+config = {"configurable": {"thread_id": "abc123"}}
 
 input_message = "What is Task Decomposition?"
-
-print("\n\n")
 
 for step in graph.stream(
     {"messages": [{"role": "user", "content": input_message}]},
     stream_mode="values",
+    config=config,
+):
+    step["messages"][-1].pretty_print()
+
+input_message = "Can you look up some common ways of doing it?"
+
+for step in graph.stream(
+    {"messages": [{"role": "user", "content": input_message}]},
+    stream_mode="values",
+    config=config,
 ):
     step["messages"][-1].pretty_print()
